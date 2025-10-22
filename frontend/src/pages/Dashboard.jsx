@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { formatDuration, formatDurationShort } from '../utils'
 
 // Use environment variable or default to localhost
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
 function Dashboard() {
+  const navigate = useNavigate()
   const [years, setYears] = useState([])
   const [months, setMonths] = useState([])
   const [seasons, setSeasons] = useState([])
@@ -220,6 +222,14 @@ function Dashboard() {
     return str.charAt(0).toUpperCase() + str.slice(1)
   }
 
+  const handleArtistClick = useCallback((artistName) => {
+    navigate('/trends', { state: { selectedItem: { name: artistName, type: 'artist' } } })
+  }, [navigate])
+
+  const handleSongClick = useCallback((trackName, artistName) => {
+    navigate('/trends', { state: { selectedItem: { trackName, artistName, type: 'track' } } })
+  }, [navigate])
+
   const getFilterDescription = () => {
     if (selectedYears.length === 0 && selectedMonths.length === 0 && selectedSeasons.length === 0) {
       return 'All Time'
@@ -380,7 +390,18 @@ function Dashboard() {
             <div className="list-container">
               {stats.top_artists.length > 0 ? (
                 stats.top_artists.map((artist, index) => (
-                  <div key={index} className="list-item">
+                  <div 
+                    key={index} 
+                    className="list-item clickable"
+                    onClick={() => handleArtistClick(artist.artistName)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        handleArtistClick(artist.artistName)
+                      }
+                    }}
+                  >
                     <div className="list-item-rank">#{index + 1}</div>
                     <div className="list-item-info">
                       <div className="list-item-name">{artist.artistName}</div>
@@ -404,7 +425,18 @@ function Dashboard() {
             <div className="list-container">
               {stats.top_songs.length > 0 ? (
                 stats.top_songs.map((song, index) => (
-                  <div key={index} className="list-item">
+                  <div 
+                    key={index} 
+                    className="list-item clickable"
+                    onClick={() => handleSongClick(song.trackName, song.artistName)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        handleSongClick(song.trackName, song.artistName)
+                      }
+                    }}
+                  >
                     <div className="list-item-rank">#{index + 1}</div>
                     <div className="list-item-info">
                       <div className="list-item-name">{song.trackName}</div>

@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import { formatTime } from '../utils'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
 function Trends() {
+  const location = useLocation()
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState({ artists: [], tracks: [] })
   const [selectedItem, setSelectedItem] = useState(null)
@@ -18,6 +20,15 @@ function Trends() {
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
   const searchTimeoutRef = useRef(null)
   const chartRef = useRef(null)
+
+  // Check if we received a selected item from navigation
+  useEffect(() => {
+    if (location.state?.selectedItem) {
+      setSelectedItem(location.state.selectedItem)
+      // Clear the navigation state so refresh doesn't reapply it
+      window.history.replaceState({}, document.title)
+    }
+  }, [location])
 
   // Debounced search
   useEffect(() => {

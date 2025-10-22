@@ -352,6 +352,21 @@ body {
   transform: translateX(5px);
 }
 
+.list-item.clickable {
+  cursor: pointer;
+}
+
+.list-item.clickable:hover {
+  background: rgba(29, 185, 84, 0.15);
+  border-color: rgba(29, 185, 84, 0.5);
+  transform: translateX(8px);
+  box-shadow: 0 4px 20px rgba(29, 185, 84, 0.2);
+}
+
+.list-item.clickable:active {
+  transform: translateX(6px) scale(0.98);
+}
+
 .list-item-rank {
   font-size: 1.2rem;
   font-weight: bold;
