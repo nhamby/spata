@@ -404,6 +404,156 @@ def get_daily_songs(date: str = Query(..., description="Date in YYYY-MM-DD forma
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
+@app.get("/api/search")
+def search_songs_and_artists(
+    query: str = Query(
+        ..., min_length=1, description="Search query for song or artist name"
+    )
+):
+    """
+    Search for songs and artists matching the query.
+    Returns matching artists and tracks.
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+
+            # Search for matching artists
+            artists_query = """
+                SELECT DISTINCT artistName, COUNT(*) as play_count
+                FROM songs
+                WHERE artistName LIKE ?
+                GROUP BY artistName
+                ORDER BY play_count DESC
+                LIMIT 10
+            """
+            cursor.execute(artists_query, (f"%{query}%",))
+            artists = [
+                {
+                    "name": row["artistName"],
+                    "type": "artist",
+                    "play_count": row["play_count"],
+                }
+                for row in cursor.fetchall()
+            ]
+
+            # Search for matching tracks
+            tracks_query = """
+                SELECT trackName, artistName, COUNT(*) as play_count
+                FROM songs
+                WHERE trackName LIKE ? OR artistName LIKE ?
+                GROUP BY trackName, artistName
+                ORDER BY play_count DESC
+                LIMIT 20
+            """
+            cursor.execute(tracks_query, (f"%{query}%", f"%{query}%"))
+            tracks = [
+                {
+                    "trackName": row["trackName"],
+                    "artistName": row["artistName"],
+                    "type": "track",
+                    "play_count": row["play_count"],
+                }
+                for row in cursor.fetchall()
+            ]
+
+        return {"artists": artists, "tracks": tracks}
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+@app.get("/api/trends")
+def get_listening_trends(
+    artist_name: Optional[str] = Query(None, description="Artist name to filter by"),
+    track_name: Optional[str] = Query(None, description="Track name to filter by"),
+    start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
+    granularity: str = Query(
+        "month", description="Aggregation level: 'day', 'week', 'month', or 'year'"
+    ),
+):
+    """
+    Get listening trends over time for a specific artist or track.
+    Returns time-series data showing play counts and duration.
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+
+            # Build WHERE clause
+            where_conditions = []
+            params = []
+
+            if artist_name:
+                where_conditions.append("artistName = ?")
+                params.append(artist_name)
+
+            if track_name:
+                where_conditions.append("trackName = ?")
+                params.append(track_name)
+
+            if start_date:
+                where_conditions.append("DATE(endTime) >= ?")
+                params.append(start_date)
+
+            if end_date:
+                where_conditions.append("DATE(endTime) <= ?")
+                params.append(end_date)
+
+            where_clause = ""
+            if where_conditions:
+                where_clause = "WHERE " + " AND ".join(where_conditions)
+
+            # Determine date grouping based on granularity
+            if granularity == "day":
+                date_format = "%Y-%m-%d"
+                date_group = "DATE(endTime)"
+            elif granularity == "week":
+                date_format = "%Y-W%W"  # Year-Week format
+                date_group = "strftime('%Y-W%W', endTime)"
+            elif granularity == "year":
+                date_format = "%Y"
+                date_group = "strftime('%Y', endTime)"
+            else:  # default to month
+                date_format = "%Y-%m"
+                date_group = "strftime('%Y-%m', endTime)"
+
+            # Get aggregated data
+            query = f"""
+                SELECT 
+                    {date_group} as period,
+                    COUNT(*) as play_count,
+                    SUM(msPlayed) as total_ms
+                FROM songs
+                {where_clause}
+                GROUP BY period
+                ORDER BY period ASC
+            """
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+
+            trends = [
+                {
+                    "period": row["period"],
+                    "play_count": row["play_count"],
+                    "total_ms": row["total_ms"],
+                }
+                for row in rows
+            ]
+
+        return {
+            "artist_name": artist_name,
+            "track_name": track_name,
+            "granularity": granularity,
+            "start_date": start_date,
+            "end_date": end_date,
+            "data": trends,
+        }
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
 @app.get("/api/health")
 def health_check():
     """Check if the database is accessible and return basic stats."""

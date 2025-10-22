@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react
 import Dashboard from './pages/Dashboard'
 import Calendar from './pages/Calendar'
 import DailyView from './pages/DailyView'
+import Trends from './pages/Trends'
 import './index.css'
 
 function Navigation() {
@@ -20,6 +21,12 @@ function Navigation() {
         className={location.pathname.startsWith('/calendar') || location.pathname.startsWith('/day') ? 'active' : ''}
       >
         Calendar
+      </Link>
+      <Link 
+        to="/trends" 
+        className={location.pathname.startsWith('/trends') ? 'active' : ''}
+      >
+        Trends
       </Link>
     </nav>
   )
@@ -40,6 +47,7 @@ function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/day/:date" element={<DailyView />} />
+          <Route path="/trends" element={<Trends />} />
         </Routes>
       </div>
     </Router>

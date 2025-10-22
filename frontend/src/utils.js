@@ -50,3 +50,13 @@ export function formatDurationShort(ms) {
   
   return `${minutes} mins`;
 }
+
+/**
+ * Alias for formatDuration - format time in milliseconds to human-readable string.
+ * 
+ * @param {number} ms - Duration in milliseconds
+ * @returns {string} Formatted string like "X days, Y hours, Z minutes"
+ */
+export function formatTime(ms) {
+  return formatDuration(ms);
+}
