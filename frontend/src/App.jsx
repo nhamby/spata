@@ -1,0 +1,49 @@
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom'
+import Dashboard from './pages/Dashboard'
+import Calendar from './pages/Calendar'
+import DailyView from './pages/DailyView'
+import './index.css'
+
+function Navigation() {
+  const location = useLocation()
+  
+  return (
+    <nav className="main-nav">
+      <Link 
+        to="/" 
+        className={location.pathname === '/' ? 'active' : ''}
+      >
+        Dashboard
+      </Link>
+      <Link 
+        to="/calendar" 
+        className={location.pathname.startsWith('/calendar') || location.pathname.startsWith('/day') ? 'active' : ''}
+      >
+        Calendar
+      </Link>
+    </nav>
+  )
+}
+
+function App() {
+  return (
+    <Router>
+      <div className="app-container">
+        <header className="header">
+          <h1>🎵 Spotify Analytics Dashboard</h1>
+          <p>Explore your personal listening history</p>
+        </header>
+
+        <Navigation />
+
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/calendar" element={<Calendar />} />
+          <Route path="/day/:date" element={<DailyView />} />
+        </Routes>
+      </div>
+    </Router>
+  )
+}
+
+export default App
