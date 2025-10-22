@@ -1,0 +1,48 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: spata-backend
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount the database as read-only for security
+      - ./backend/spotify.db:/app/spotify.db:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    # Health check defined in Dockerfile
+    networks:
+      - spata-network
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    tmpfs:
+      - /tmp
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: spata-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    # Health check defined in Dockerfile
+    networks:
+      - spata-network
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /var/run:uid=101,gid=101
+      - /var/cache/nginx:uid=101,gid=101
+
+networks:
+  spata-network:
+    driver: bridge
