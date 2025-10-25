@@ -262,201 +262,210 @@ function Dashboard() {
   }
 
   return (
-    <>
-      <div className="filters-container">
-        <div className="filter-section">
-          <div className="filter-header">
-            <label>Years</label>
-            <div className="filter-actions">
-              <button className="select-all-btn" onClick={handleSelectAllYears}>
-                {selectedYears.length === years.length ? 'Clear All' : 'Select All'}
-              </button>
-              {selectedYears.length > 0 && selectedYears.length < years.length && (
-                <button className="clear-btn" onClick={handleClearAllYears}>
-                  Deselect All
-                </button>
-              )}
-            </div>
-          </div>
-          <div className="filter-chips">
-            {years.map(year => (
-              <button
-                key={year}
-                className={`filter-chip ${selectedYears.includes(year) ? 'active' : ''}`}
-                onClick={(e) => {
-                  e.preventDefault()
-                  handleYearToggle(year)
-                }}
-                type="button"
-              >
-                {year}
-              </button>
-            ))}
+    <div className="dashboard-layout">
+      {/* Sidebar for filters */}
+      <aside className="dashboard-sidebar">
+        <div className="sidebar-header">
+          <h3>Filters</h3>
+          <div className="current-filter-compact">
+            {getFilterDescription()}
           </div>
         </div>
 
-        {seasons.length > 0 && (
+        <div className="sidebar-filters">
           <div className="filter-section">
             <div className="filter-header">
-              <label>Seasons</label>
+              <label>Years</label>
               <div className="filter-actions">
-                <button className="select-all-btn" onClick={handleSelectAllSeasons}>
-                  {selectedSeasons.length === seasons.length ? 'Clear All' : 'Select All'}
+                <button className="select-all-btn" onClick={handleSelectAllYears}>
+                  {selectedYears.length === years.length ? 'Clear All' : 'Select All'}
                 </button>
-                {selectedSeasons.length > 0 && selectedSeasons.length < seasons.length && (
-                  <button className="clear-btn" onClick={handleClearAllSeasons}>
+                {selectedYears.length > 0 && selectedYears.length < years.length && (
+                  <button className="clear-btn" onClick={handleClearAllYears}>
                     Deselect All
                   </button>
                 )}
               </div>
             </div>
             <div className="filter-chips">
-              {seasons.map(season => (
+              {years.map(year => (
                 <button
-                  key={season}
-                  className={`filter-chip ${selectedSeasons.includes(season) ? 'active' : ''}`}
+                  key={year}
+                  className={`filter-chip ${selectedYears.includes(year) ? 'active' : ''}`}
                   onClick={(e) => {
                     e.preventDefault()
-                    handleSeasonToggle(season)
+                    handleYearToggle(year)
                   }}
                   type="button"
                 >
-                  {capitalizeFirst(season)}
+                  {year}
                 </button>
               ))}
             </div>
           </div>
+
+          {seasons.length > 0 && (
+            <div className="filter-section">
+              <div className="filter-header">
+                <label>Seasons</label>
+                <div className="filter-actions">
+                  <button className="select-all-btn" onClick={handleSelectAllSeasons}>
+                    {selectedSeasons.length === seasons.length ? 'Clear All' : 'Select All'}
+                  </button>
+                  {selectedSeasons.length > 0 && selectedSeasons.length < seasons.length && (
+                    <button className="clear-btn" onClick={handleClearAllSeasons}>
+                      Deselect All
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="filter-chips">
+                {seasons.map(season => (
+                  <button
+                    key={season}
+                    className={`filter-chip ${selectedSeasons.includes(season) ? 'active' : ''}`}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      handleSeasonToggle(season)
+                    }}
+                    type="button"
+                  >
+                    {capitalizeFirst(season)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {months.length > 0 && selectedSeasons.length === 0 && (
+            <div className="filter-section">
+              <div className="filter-header">
+                <label>Months</label>
+                <div className="filter-actions">
+                  <button className="select-all-btn" onClick={handleSelectAllMonths}>
+                    {selectedMonths.length === [...new Set(months.map(m => m.month))].length ? 'Clear All' : 'Select All'}
+                  </button>
+                  {selectedMonths.length > 0 && selectedMonths.length < [...new Set(months.map(m => m.month))].length && (
+                    <button className="clear-btn" onClick={handleClearAllMonths}>
+                      Deselect All
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="filter-chips">
+                {[...new Set(months.map(m => m.month))].sort().map(month => (
+                  <button
+                    key={month}
+                    className={`filter-chip ${selectedMonths.includes(month) ? 'active' : ''}`}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      handleMonthToggle(month)
+                    }}
+                    type="button"
+                  >
+                    {getMonthName(month)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </aside>
+
+      {/* Main content area */}
+      <main className="dashboard-main">
+        {loading && !stats && (
+          <div className="loading">Loading your data...</div>
         )}
 
-        {months.length > 0 && selectedSeasons.length === 0 && (
-          <div className="filter-section">
-            <div className="filter-header">
-              <label>Months</label>
-              <div className="filter-actions">
-                <button className="select-all-btn" onClick={handleSelectAllMonths}>
-                  {selectedMonths.length === [...new Set(months.map(m => m.month))].length ? 'Clear All' : 'Select All'}
-                </button>
-                {selectedMonths.length > 0 && selectedMonths.length < [...new Set(months.map(m => m.month))].length && (
-                  <button className="clear-btn" onClick={handleClearAllMonths}>
-                    Deselect All
-                  </button>
+        {error && (
+          <div className="error">{error}</div>
+        )}
+
+        {stats && (
+          <div className={`stats-container ${isTransitioning ? 'transitioning' : ''}`}>
+            {/* Total Time Card */}
+            <div className="stat-card" style={{ gridColumn: '1 / -1' }}>
+              <h2>Total Listening Time</h2>
+              <div className="total-time">
+                {formatDuration(stats.total_ms_played)}
+              </div>
+            </div>
+
+            {/* Top Artists Card */}
+            <div className="stat-card">
+              <h2>Top Artists</h2>
+              <div className="list-container">
+                {stats.top_artists.length > 0 ? (
+                  stats.top_artists.map((artist, index) => (
+                    <div 
+                      key={index} 
+                      className="list-item clickable"
+                      onClick={() => handleArtistClick(artist.artistName)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          handleArtistClick(artist.artistName)
+                        }
+                      }}
+                    >
+                      <div className="list-item-rank">#{index + 1}</div>
+                      <div className="list-item-info">
+                        <div className="list-item-name">{artist.artistName}</div>
+                      </div>
+                      <div className="list-item-duration">
+                        {formatDurationShort(artist.duration_ms)}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
+                    No data available
+                  </div>
                 )}
               </div>
             </div>
-            <div className="filter-chips">
-              {[...new Set(months.map(m => m.month))].sort().map(month => (
-                <button
-                  key={month}
-                  className={`filter-chip ${selectedMonths.includes(month) ? 'active' : ''}`}
-                  onClick={(e) => {
-                    e.preventDefault()
-                    handleMonthToggle(month)
-                  }}
-                  type="button"
-                >
-                  {getMonthName(month)}
-                </button>
-              ))}
+
+            {/* Top Songs Card */}
+            <div className="stat-card">
+              <h2>Top Songs</h2>
+              <div className="list-container">
+                {stats.top_songs.length > 0 ? (
+                  stats.top_songs.map((song, index) => (
+                    <div 
+                      key={index} 
+                      className="list-item clickable"
+                      onClick={() => handleSongClick(song.trackName, song.artistName)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          handleSongClick(song.trackName, song.artistName)
+                        }
+                      }}
+                    >
+                      <div className="list-item-rank">#{index + 1}</div>
+                      <div className="list-item-info">
+                        <div className="list-item-name">{song.trackName}</div>
+                        <div className="list-item-artist">{song.artistName}</div>
+                      </div>
+                      <div className="list-item-duration">
+                        {formatDurationShort(song.duration_ms)}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
+                    No data available
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
-
-        <div className="current-filter">
-          Showing: <strong>{getFilterDescription()}</strong>
-        </div>
-      </div>
-
-      {loading && !stats && (
-        <div className="loading">Loading your data...</div>
-      )}
-
-      {error && (
-        <div className="error">{error}</div>
-      )}
-
-      {stats && (
-        <div className={`stats-container ${isTransitioning ? 'transitioning' : ''}`}>
-          {/* Total Time Card */}
-          <div className="stat-card" style={{ gridColumn: '1 / -1' }}>
-            <h2>Total Listening Time</h2>
-            <div className="total-time">
-              {formatDuration(stats.total_ms_played)}
-            </div>
-          </div>
-
-          {/* Top Artists Card */}
-          <div className="stat-card">
-            <h2>Top Artists</h2>
-            <div className="list-container">
-              {stats.top_artists.length > 0 ? (
-                stats.top_artists.map((artist, index) => (
-                  <div 
-                    key={index} 
-                    className="list-item clickable"
-                    onClick={() => handleArtistClick(artist.artistName)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        handleArtistClick(artist.artistName)
-                      }
-                    }}
-                  >
-                    <div className="list-item-rank">#{index + 1}</div>
-                    <div className="list-item-info">
-                      <div className="list-item-name">{artist.artistName}</div>
-                    </div>
-                    <div className="list-item-duration">
-                      {formatDurationShort(artist.duration_ms)}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
-                  No data available
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Top Songs Card */}
-          <div className="stat-card">
-            <h2>Top Songs</h2>
-            <div className="list-container">
-              {stats.top_songs.length > 0 ? (
-                stats.top_songs.map((song, index) => (
-                  <div 
-                    key={index} 
-                    className="list-item clickable"
-                    onClick={() => handleSongClick(song.trackName, song.artistName)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        handleSongClick(song.trackName, song.artistName)
-                      }
-                    }}
-                  >
-                    <div className="list-item-rank">#{index + 1}</div>
-                    <div className="list-item-info">
-                      <div className="list-item-name">{song.trackName}</div>
-                      <div className="list-item-artist">{song.artistName}</div>
-                    </div>
-                    <div className="list-item-duration">
-                      {formatDurationShort(song.duration_ms)}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
-                  No data available
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+      </main>
+    </div>
   )
 }
 

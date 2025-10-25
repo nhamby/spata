@@ -51,6 +51,82 @@ body {
   font-size: 1.1rem;
 }
 
+/* Dashboard Sidebar Layout */
+.dashboard-layout {
+  display: flex;
+  gap: 25px;
+  align-items: flex-start;
+}
+
+.dashboard-sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 20px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 15px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 20px;
+}
+
+.dashboard-sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dashboard-sidebar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.dashboard-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(29, 185, 84, 0.3);
+  border-radius: 4px;
+}
+
+.dashboard-sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(29, 185, 84, 0.5);
+}
+
+.sidebar-header {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-header h3 {
+  font-size: 1.4rem;
+  color: #1db954;
+  margin-bottom: 10px;
+}
+
+.current-filter-compact {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 8px 12px;
+  background: rgba(29, 185, 84, 0.1);
+  border-radius: 6px;
+  border: 1px solid rgba(29, 185, 84, 0.2);
+}
+
+.current-filter-compact strong {
+  color: #1db954;
+  font-weight: 600;
+}
+
+.sidebar-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.dashboard-main {
+  flex: 1;
+  min-width: 0;
+}
+
 .filters-container {
   display: flex;
   flex-direction: column;
@@ -68,14 +144,23 @@ body {
   gap: 12px;
 }
 
+.sidebar-filters .filter-section {
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
 .filter-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .filter-header label {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
   color: #1db954;
 }
@@ -398,6 +483,21 @@ body {
 }
 
 @media (max-width: 768px) {
+  .dashboard-layout {
+    flex-direction: column;
+  }
+  
+  .dashboard-sidebar {
+    width: 100%;
+    position: relative;
+    top: 0;
+    max-height: none;
+  }
+  
+  .dashboard-main {
+    width: 100%;
+  }
+  
   .stats-container {
     grid-template-columns: 1fr;
   }
