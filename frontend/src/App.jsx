@@ -37,11 +37,14 @@ function App() {
     <Router>
       <div className="app-container">
         <header className="header">
-          <h1>Spata</h1>
-          <p>A Spotify Analytics Platform</p>
+          <div className="header-content">
+            <div className="logo">
+              <h1>Spata</h1>
+              <span className="tagline">Spotify Analytics</span>
+            </div>
+            <Navigation />
+          </div>
         </header>
-
-        <Navigation />
 
         <Routes>
           <Route path="/" element={<Dashboard />} />

@@ -16,6 +16,7 @@ function Trends() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [chartType, setChartType] = useState('bar') // 'bar' or 'density'
+  const [yAxisMetric, setYAxisMetric] = useState('plays') // 'plays' or 'duration'
   const [hoveredIndex, setHoveredIndex] = useState(null)
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
   const searchTimeoutRef = useRef(null)
@@ -149,6 +150,7 @@ function Trends() {
     setStartDate('')
     setEndDate('')
     setChartType('bar')
+    setYAxisMetric('plays')
     setHoveredIndex(null)
   }, [])
 
@@ -294,6 +296,34 @@ function Trends() {
     return { data: filledData, maxPlayCount, maxDuration }
   }, [trendsData, granularity, fillMissingPeriods])
 
+  // Get the appropriate y-axis value and max based on selected metric
+  const getYValue = useCallback((item) => {
+    return yAxisMetric === 'plays' ? item.play_count : item.total_ms
+  }, [yAxisMetric])
+
+  const getYMax = useCallback((chartData) => {
+    return yAxisMetric === 'plays' ? chartData.maxPlayCount : chartData.maxDuration
+  }, [yAxisMetric])
+
+  const getYAxisLabel = useCallback(() => {
+    return yAxisMetric === 'plays' ? 'Number of Plays' : 'Listening Duration (Minutes)'
+  }, [yAxisMetric])
+
+  const getXAxisLabel = useCallback(() => {
+    const labels = {
+      day: 'Date',
+      week: 'Week',
+      month: 'Month',
+      year: 'Year'
+    }
+    return labels[granularity] || 'Time Period'
+  }, [granularity])
+
+  // Convert milliseconds to minutes for display
+  const msToMinutes = useCallback((ms) => {
+    return Math.round(ms / 60000)
+  }, [])
+
   const chartData = getChartData()
 
   return (
@@ -401,6 +431,26 @@ function Trends() {
             </div>
 
             <div className="filter-group">
+              <label>Y-Axis:</label>
+              <div className="chart-type-toggle">
+                <button
+                  className={`toggle-btn ${yAxisMetric === 'plays' ? 'active' : ''}`}
+                  onClick={() => setYAxisMetric('plays')}
+                  aria-label="Show play count"
+                >
+                  Plays
+                </button>
+                <button
+                  className={`toggle-btn ${yAxisMetric === 'duration' ? 'active' : ''}`}
+                  onClick={() => setYAxisMetric('duration')}
+                  aria-label="Show duration"
+                >
+                  Duration
+                </button>
+              </div>
+            </div>
+
+            <div className="filter-group">
               <label>Granularity:</label>
               <select value={granularity} onChange={(e) => setGranularity(e.target.value)}>
                 <option value="day">Day</option>
@@ -484,9 +534,12 @@ function Trends() {
                   </div>
                 )}
 
+                {/* Y-axis label */}
+                <div className="chart-y-label">{getYAxisLabel()}</div>
+
                 <div className="chart-y-axis">
-                  <span>{chartData.maxPlayCount}</span>
-                  <span>{Math.round(chartData.maxPlayCount / 2)}</span>
+                  <span>{yAxisMetric === 'plays' ? getYMax(chartData) : msToMinutes(getYMax(chartData))}</span>
+                  <span>{yAxisMetric === 'plays' ? Math.round(getYMax(chartData) / 2) : msToMinutes(Math.round(getYMax(chartData) / 2))}</span>
                   <span>0</span>
                 </div>
                 <div className="chart-content">
@@ -495,7 +548,9 @@ function Trends() {
                     <>
                       <div className="chart-bars">
                         {chartData.data.map((item, idx) => {
-                          const heightPercent = (item.play_count / chartData.maxPlayCount) * 100
+                          const yValue = getYValue(item)
+                          const yMax = getYMax(chartData)
+                          const heightPercent = (yValue / yMax) * 100
                           return (
                             <div 
                               key={idx} 
@@ -507,7 +562,9 @@ function Trends() {
                                 onMouseEnter={(e) => handleMouseEnter(idx, e)}
                                 onMouseLeave={handleMouseLeave}
                               >
-                                <span className="bar-value">{item.play_count}</span>
+                                <span className="bar-value">
+                                  {yAxisMetric === 'plays' ? yValue : msToMinutes(yValue)}
+                                </span>
                               </div>
                             </div>
                           )
@@ -523,6 +580,8 @@ function Trends() {
                           )
                         })}
                       </div>
+                      {/* X-axis label */}
+                      <div className="chart-x-label">{getXAxisLabel()}</div>
                     </>
                   ) : (
                     /* Density Plot */
@@ -543,11 +602,12 @@ function Trends() {
                             const width = 1000
                             const height = 300
                             const step = width / (chartData.data.length - 1 || 1)
+                            const yMax = getYMax(chartData)
                             
                             // Generate points for the curve
                             const points = chartData.data.map((item, idx) => ({
                               x: idx * step,
-                              y: height - (item.play_count / chartData.maxPlayCount) * height
+                              y: height - (getYValue(item) / yMax) * height
                             }))
                             
                             // Start path
@@ -581,8 +641,9 @@ function Trends() {
                           const width = 1000
                           const height = 300
                           const step = width / (chartData.data.length - 1 || 1)
+                          const yMax = getYMax(chartData)
                           const x = idx * step
-                          const y = height - (item.play_count / chartData.maxPlayCount) * height
+                          const y = height - (getYValue(item) / yMax) * height
                           
                           return (
                             <g key={idx}>
@@ -628,6 +689,8 @@ function Trends() {
                           )
                         })}
                       </div>
+                      {/* X-axis label */}
+                      <div className="chart-x-label">{getXAxisLabel()}</div>
                     </>
                   )}
                 </div>
