@@ -15,7 +15,6 @@ function Trends() {
   const [endDate, setEndDate] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [chartType, setChartType] = useState('bar') // 'bar' or 'density'
   const [yAxisMetric, setYAxisMetric] = useState('plays') // 'plays' or 'duration'
   const [hoveredIndex, setHoveredIndex] = useState(null)
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
@@ -149,7 +148,6 @@ function Trends() {
     setTrendsData(null)
     setStartDate('')
     setEndDate('')
-    setChartType('bar')
     setYAxisMetric('plays')
     setHoveredIndex(null)
   }, [])
@@ -194,6 +192,13 @@ function Trends() {
   const fillMissingPeriods = useCallback((data, granularity) => {
     if (!data || data.length === 0) return []
 
+    // Safety limit: if data has too many items already, don't try to fill
+    const MAX_FILLED_ITEMS = 1000
+    if (data.length > MAX_FILLED_ITEMS) {
+      console.warn(`Data length (${data.length}) exceeds safety limit. Skipping fill.`)
+      return data
+    }
+
     // Create a map of existing data for quick lookup
     const dataMap = new Map()
     data.forEach(item => {
@@ -210,10 +215,30 @@ function Trends() {
       const [startYear, startMonth] = firstPeriod.split('-').map(Number)
       const [endYear, endMonth] = lastPeriod.split('-').map(Number)
       
+      // Validate parsed values
+      if (isNaN(startYear) || isNaN(startMonth) || isNaN(endYear) || isNaN(endMonth)) {
+        console.error('Invalid date format in month data')
+        return data
+      }
+      
+      // Calculate total months to prevent infinite loops
+      const totalMonths = (endYear - startYear) * 12 + (endMonth - startMonth) + 1
+      if (totalMonths > MAX_FILLED_ITEMS || totalMonths < 0) {
+        console.warn(`Month range too large (${totalMonths} months). Skipping fill.`)
+        return data
+      }
+      
       let currentYear = startYear
       let currentMonth = startMonth
+      let iterations = 0
       
       while (currentYear < endYear || (currentYear === endYear && currentMonth <= endMonth)) {
+        // Safety check to prevent infinite loops
+        if (iterations++ > MAX_FILLED_ITEMS) {
+          console.error('Infinite loop detected in fillMissingPeriods')
+          break
+        }
+        
         const period = `${currentYear}-${String(currentMonth).padStart(2, '0')}`
         
         if (dataMap.has(period)) {
@@ -255,9 +280,29 @@ function Trends() {
       const startDate = new Date(data[0].period)
       const endDate = new Date(data[data.length - 1].period)
       
+      // Validate dates
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        console.error('Invalid date format in day data')
+        return data
+      }
+      
+      // Calculate total days to prevent infinite loops
+      const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1
+      if (totalDays > MAX_FILLED_ITEMS || totalDays < 0) {
+        console.warn(`Day range too large (${totalDays} days). Skipping fill.`)
+        return data
+      }
+      
       let currentDate = new Date(startDate)
+      let iterations = 0
       
       while (currentDate <= endDate) {
+        // Safety check to prevent infinite loops
+        if (iterations++ > MAX_FILLED_ITEMS) {
+          console.error('Infinite loop detected in fillMissingPeriods')
+          break
+        }
+        
         const period = currentDate.toISOString().split('T')[0]
         
         if (dataMap.has(period)) {
@@ -411,26 +456,6 @@ function Trends() {
           {/* Filters */}
           <div className="trends-filters">
             <div className="filter-group">
-              <label>Chart Type:</label>
-              <div className="chart-type-toggle">
-                <button
-                  className={`toggle-btn ${chartType === 'bar' ? 'active' : ''}`}
-                  onClick={() => setChartType('bar')}
-                  aria-label="Bar chart view"
-                >
-                  Bar
-                </button>
-                <button
-                  className={`toggle-btn ${chartType === 'density' ? 'active' : ''}`}
-                  onClick={() => setChartType('density')}
-                  aria-label="Density plot view"
-                >
-                  Density
-                </button>
-              </div>
-            </div>
-
-            <div className="filter-group">
               <label>Y-Axis:</label>
               <div className="chart-type-toggle">
                 <button
@@ -454,7 +479,6 @@ function Trends() {
               <label>Granularity:</label>
               <select value={granularity} onChange={(e) => setGranularity(e.target.value)}>
                 <option value="day">Day</option>
-                <option value="week">Week</option>
                 <option value="month">Month</option>
                 <option value="year">Year</option>
               </select>
@@ -543,156 +567,43 @@ function Trends() {
                   <span>0</span>
                 </div>
                 <div className="chart-content">
-                  {chartType === 'bar' ? (
-                    /* Bar Chart */
-                    <>
-                      <div className="chart-bars">
-                        {chartData.data.map((item, idx) => {
-                          const yValue = getYValue(item)
-                          const yMax = getYMax(chartData)
-                          const heightPercent = (yValue / yMax) * 100
-                          return (
-                            <div 
-                              key={idx} 
-                              className="bar-wrapper"
-                            >
-                              <div 
-                                className={`bar ${hoveredIndex === idx ? 'hovered' : ''}`}
-                                style={{ height: `${heightPercent}%` }}
-                                onMouseEnter={(e) => handleMouseEnter(idx, e)}
-                                onMouseLeave={handleMouseLeave}
-                              >
-                                <span className="bar-value">
-                                  {yAxisMetric === 'plays' ? yValue : msToMinutes(yValue)}
-                                </span>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                      <div className="chart-x-axis">
-                        {chartData.data.map((item, idx) => {
-                          const showLabel = chartData.data.length <= 12 || idx % Math.ceil(chartData.data.length / 12) === 0
-                          return (
-                            <span key={idx} className={showLabel ? '' : 'hidden-label'}>
-                              {formatPeriod(item.period, granularity)}
+                  {/* Bar Chart */}
+                  <div className="chart-bars">
+                    {chartData.data.map((item, idx) => {
+                      const yValue = getYValue(item)
+                      const yMax = getYMax(chartData)
+                      const heightPercent = (yValue / yMax) * 100
+                      return (
+                        <div 
+                          key={idx} 
+                          className="bar-wrapper"
+                        >
+                          <div 
+                            className={`bar ${hoveredIndex === idx ? 'hovered' : ''}`}
+                            style={{ height: `${heightPercent}%` }}
+                            onMouseEnter={(e) => handleMouseEnter(idx, e)}
+                            onMouseLeave={handleMouseLeave}
+                          >
+                            <span className="bar-value">
+                              {yAxisMetric === 'plays' ? yValue : msToMinutes(yValue)}
                             </span>
-                          )
-                        })}
-                      </div>
-                      {/* X-axis label */}
-                      <div className="chart-x-label">{getXAxisLabel()}</div>
-                    </>
-                  ) : (
-                    /* Density Plot */
-                    <>
-                      <svg className="density-chart" viewBox="0 0 1000 300" preserveAspectRatio="none">
-                        <defs>
-                          <linearGradient id="densityGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" stopColor="#1db954" stopOpacity="0.8" />
-                            <stop offset="100%" stopColor="#1db954" stopOpacity="0.1" />
-                          </linearGradient>
-                        </defs>
-                        
-                        {/* Create smooth curve using path */}
-                        <path
-                          d={(() => {
-                            if (chartData.data.length === 0) return ''
-                            
-                            const width = 1000
-                            const height = 300
-                            const step = width / (chartData.data.length - 1 || 1)
-                            const yMax = getYMax(chartData)
-                            
-                            // Generate points for the curve
-                            const points = chartData.data.map((item, idx) => ({
-                              x: idx * step,
-                              y: height - (getYValue(item) / yMax) * height
-                            }))
-                            
-                            // Start path
-                            let path = `M 0,${height} L 0,${points[0].y}`
-                            
-                            // Create smooth curve using quadratic bezier curves
-                            for (let i = 0; i < points.length - 1; i++) {
-                              const current = points[i]
-                              const next = points[i + 1]
-                              const midX = (current.x + next.x) / 2
-                              
-                              path += ` Q ${current.x},${current.y} ${midX},${(current.y + next.y) / 2}`
-                            }
-                            
-                            // Complete the curve to the last point
-                            const last = points[points.length - 1]
-                            path += ` Q ${last.x},${last.y} ${last.x},${last.y}`
-                            
-                            // Close the path at the bottom
-                            path += ` L ${width},${height} Z`
-                            
-                            return path
-                          })()}
-                          fill="url(#densityGradient)"
-                          stroke="#1db954"
-                          strokeWidth="3"
-                        />
-                        
-                        {/* Add interactive circles for each data point */}
-                        {chartData.data.map((item, idx) => {
-                          const width = 1000
-                          const height = 300
-                          const step = width / (chartData.data.length - 1 || 1)
-                          const yMax = getYMax(chartData)
-                          const x = idx * step
-                          const y = height - (getYValue(item) / yMax) * height
-                          
-                          return (
-                            <g key={idx}>
-                              <circle
-                                cx={x}
-                                cy={y}
-                                r={hoveredIndex === idx ? 8 : 5}
-                                fill={hoveredIndex === idx ? '#1ed760' : '#1db954'}
-                                stroke="white"
-                                strokeWidth="2"
-                                className="density-point"
-                                onMouseEnter={(e) => {
-                                  // Convert SVG coordinates to chart container coordinates
-                                  const svg = e.currentTarget.ownerSVGElement
-                                  const svgRect = svg.getBoundingClientRect()
-                                  const chartRect = chartRef.current.getBoundingClientRect()
-                                  const scrollLeft = chartRef.current.scrollLeft || 0
-                                  
-                                  // Calculate the point position in screen coordinates
-                                  const pointX = svgRect.left + (x / width) * svgRect.width
-                                  const pointY = svgRect.top + (y / height) * svgRect.height
-                                  
-                                  setHoveredIndex(idx)
-                                  setTooltipPosition({
-                                    x: pointX - chartRect.left + scrollLeft,
-                                    y: pointY - chartRect.top - 10
-                                  })
-                                }}
-                                onMouseLeave={handleMouseLeave}
-                                style={{ cursor: 'pointer', transition: 'all 0.2s ease' }}
-                              />
-                            </g>
-                          )
-                        })}
-                      </svg>
-                      <div className="chart-x-axis density-x-axis">
-                        {chartData.data.map((item, idx) => {
-                          const showLabel = chartData.data.length <= 12 || idx % Math.ceil(chartData.data.length / 12) === 0
-                          return (
-                            <span key={idx} className={showLabel ? '' : 'hidden-label'}>
-                              {formatPeriod(item.period, granularity)}
-                            </span>
-                          )
-                        })}
-                      </div>
-                      {/* X-axis label */}
-                      <div className="chart-x-label">{getXAxisLabel()}</div>
-                    </>
-                  )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="chart-x-axis">
+                    {chartData.data.map((item, idx) => {
+                      const showLabel = chartData.data.length <= 12 || idx % Math.ceil(chartData.data.length / 12) === 0
+                      return (
+                        <span key={idx} className={showLabel ? '' : 'hidden-label'}>
+                          {formatPeriod(item.period, granularity)}
+                        </span>
+                      )
+                    })}
+                  </div>
+                  {/* X-axis label */}
+                  <div className="chart-x-label">{getXAxisLabel()}</div>
                 </div>
               </div>
             </div>
