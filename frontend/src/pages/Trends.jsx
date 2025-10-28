@@ -21,6 +21,35 @@ function Trends() {
   const searchTimeoutRef = useRef(null)
   const chartRef = useRef(null)
 
+  // Format period for display (e.g., "2023-11" -> "Nov 2023")
+  const formatPeriod = useCallback((period, granularity) => {
+    if (!period) return period
+
+    if (granularity === 'month') {
+      // Format: "2023-11" -> "Nov 2023"
+      const [year, month] = period.split('-')
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+      const monthIndex = parseInt(month, 10) - 1
+      return `${monthNames[monthIndex]} ${year}`
+    } else if (granularity === 'week') {
+      // Format: "2023-W45" -> "Week 45 2023"
+      const match = period.match(/(\d{4})-W(\d+)/)
+      if (match) {
+        return `Week ${match[2]} ${match[1]}`
+      }
+    } else if (granularity === 'day') {
+      // Format: "2023-11-15" -> "Nov 15, 2023"
+      const date = new Date(period)
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+      return `${monthNames[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`
+    }
+    
+    // For year or unknown granularity, return as-is
+    return period
+  }, [])
+
   // Check if we received a selected item from navigation
   useEffect(() => {
     if (location.state?.selectedItem) {
@@ -159,23 +188,118 @@ function Trends() {
     }
   }, [])
 
+  // Fill in missing periods with zero data
+  const fillMissingPeriods = useCallback((data, granularity) => {
+    if (!data || data.length === 0) return []
+
+    // Create a map of existing data for quick lookup
+    const dataMap = new Map()
+    data.forEach(item => {
+      dataMap.set(item.period, item)
+    })
+
+    const filledData = []
+    
+    if (granularity === 'month') {
+      // Parse first and last periods
+      const firstPeriod = data[0].period
+      const lastPeriod = data[data.length - 1].period
+      
+      const [startYear, startMonth] = firstPeriod.split('-').map(Number)
+      const [endYear, endMonth] = lastPeriod.split('-').map(Number)
+      
+      let currentYear = startYear
+      let currentMonth = startMonth
+      
+      while (currentYear < endYear || (currentYear === endYear && currentMonth <= endMonth)) {
+        const period = `${currentYear}-${String(currentMonth).padStart(2, '0')}`
+        
+        if (dataMap.has(period)) {
+          filledData.push(dataMap.get(period))
+        } else {
+          filledData.push({
+            period: period,
+            play_count: 0,
+            total_ms: 0
+          })
+        }
+        
+        currentMonth++
+        if (currentMonth > 12) {
+          currentMonth = 1
+          currentYear++
+        }
+      }
+    } else if (granularity === 'year') {
+      // Parse first and last years
+      const startYear = parseInt(data[0].period)
+      const endYear = parseInt(data[data.length - 1].period)
+      
+      for (let year = startYear; year <= endYear; year++) {
+        const period = String(year)
+        
+        if (dataMap.has(period)) {
+          filledData.push(dataMap.get(period))
+        } else {
+          filledData.push({
+            period: period,
+            play_count: 0,
+            total_ms: 0
+          })
+        }
+      }
+    } else if (granularity === 'day') {
+      // Parse first and last dates
+      const startDate = new Date(data[0].period)
+      const endDate = new Date(data[data.length - 1].period)
+      
+      let currentDate = new Date(startDate)
+      
+      while (currentDate <= endDate) {
+        const period = currentDate.toISOString().split('T')[0]
+        
+        if (dataMap.has(period)) {
+          filledData.push(dataMap.get(period))
+        } else {
+          filledData.push({
+            period: period,
+            play_count: 0,
+            total_ms: 0
+          })
+        }
+        
+        currentDate.setDate(currentDate.getDate() + 1)
+      }
+    } else if (granularity === 'week') {
+      // For weeks, just use the existing data as-is
+      // (filling weeks is complex due to week number variations)
+      return data
+    } else {
+      return data
+    }
+    
+    return filledData
+  }, [])
+
   // Calculate chart dimensions and data
   const getChartData = useCallback(() => {
     if (!trendsData || !trendsData.data.length) return null
 
-    const data = trendsData.data
-    const maxPlayCount = Math.max(...data.map(d => d.play_count))
-    const maxDuration = Math.max(...data.map(d => d.total_ms))
+    // Fill in missing periods
+    const filledData = fillMissingPeriods(trendsData.data, granularity)
+    
+    const maxPlayCount = Math.max(...filledData.map(d => d.play_count), 1) // Ensure at least 1 for scale
+    const maxDuration = Math.max(...filledData.map(d => d.total_ms), 1)
 
-    return { data, maxPlayCount, maxDuration }
-  }, [trendsData])
+    return { data: filledData, maxPlayCount, maxDuration }
+  }, [trendsData, granularity, fillMissingPeriods])
 
   const chartData = getChartData()
 
   return (
     <div className="trends-container">
       <div className="trends-header">
-        <h2>🔍 Search & Trends</h2>
+        <h2>Search & Trends</h2>
         <p>Search for an artist or song to see your listening trends over time</p>
       </div>
 
@@ -210,7 +334,7 @@ function Trends() {
                     onClick={() => handleSelectItem(artist)}
                   >
                     <div className="result-info">
-                      <span className="result-name">🎤 {artist.name}</span>
+                      <span className="result-name">{artist.name}</span>
                       <span className="result-meta">{artist.play_count} plays</span>
                     </div>
                   </div>
@@ -228,7 +352,7 @@ function Trends() {
                     onClick={() => handleSelectItem(track)}
                   >
                     <div className="result-info">
-                      <span className="result-name">🎵 {track.trackName}</span>
+                      <span className="result-name">{track.trackName}</span>
                       <span className="result-artist">by {track.artistName}</span>
                       <span className="result-meta">{track.play_count} plays</span>
                     </div>
@@ -247,7 +371,6 @@ function Trends() {
         <div className="trends-content">
           <div className="selected-item-header">
             <h3>
-              {selectedItem.type === 'artist' ? '🎤' : '🎵'}{' '}
               {selectedItem.type === 'artist' 
                 ? selectedItem.name 
                 : `${selectedItem.trackName} - ${selectedItem.artistName}`
@@ -265,14 +388,14 @@ function Trends() {
                   onClick={() => setChartType('bar')}
                   aria-label="Bar chart view"
                 >
-                  📊 Bar
+                  Bar
                 </button>
                 <button
                   className={`toggle-btn ${chartType === 'density' ? 'active' : ''}`}
                   onClick={() => setChartType('density')}
                   aria-label="Density plot view"
                 >
-                  📈 Density
+                  Density
                 </button>
               </div>
             </div>
@@ -335,7 +458,10 @@ function Trends() {
                 <div className="stat-box">
                   <span className="stat-label">Peak Period</span>
                   <span className="stat-value">
-                    {chartData.data.reduce((max, d) => d.play_count > max.play_count ? d : max, chartData.data[0]).period}
+                    {formatPeriod(
+                      chartData.data.reduce((max, d) => d.play_count > max.play_count ? d : max, chartData.data[0]).period,
+                      granularity
+                    )}
                   </span>
                 </div>
               </div>
@@ -350,10 +476,10 @@ function Trends() {
                       top: `${tooltipPosition.y}px`,
                     }}
                   >
-                    <div className="tooltip-date">{chartData.data[hoveredIndex].period}</div>
+                    <div className="tooltip-date">{formatPeriod(chartData.data[hoveredIndex].period, granularity)}</div>
                     <div className="tooltip-stats">
-                      <span>🎵 {chartData.data[hoveredIndex].play_count} plays</span>
-                      <span>⏱️ {formatTime(chartData.data[hoveredIndex].total_ms)}</span>
+                      <span>{chartData.data[hoveredIndex].play_count} plays</span>
+                      <span>{formatTime(chartData.data[hoveredIndex].total_ms)}</span>
                     </div>
                   </div>
                 )}
@@ -392,7 +518,7 @@ function Trends() {
                           const showLabel = chartData.data.length <= 12 || idx % Math.ceil(chartData.data.length / 12) === 0
                           return (
                             <span key={idx} className={showLabel ? '' : 'hidden-label'}>
-                              {item.period}
+                              {formatPeriod(item.period, granularity)}
                             </span>
                           )
                         })}
@@ -497,7 +623,7 @@ function Trends() {
                           const showLabel = chartData.data.length <= 12 || idx % Math.ceil(chartData.data.length / 12) === 0
                           return (
                             <span key={idx} className={showLabel ? '' : 'hidden-label'}>
-                              {item.period}
+                              {formatPeriod(item.period, granularity)}
                             </span>
                           )
                         })}
@@ -517,7 +643,7 @@ function Trends() {
 
       {!selectedItem && !searchQuery && (
         <div className="trends-placeholder">
-          <p>👆 Start by searching for an artist or song above</p>
+          <p>Start by searching for an artist or song above</p>
         </div>
       )}
     </div>

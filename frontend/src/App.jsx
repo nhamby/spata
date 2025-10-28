@@ -37,8 +37,8 @@ function App() {
     <Router>
       <div className="app-container">
         <header className="header">
-          <h1>🎵 Spotify Analytics Dashboard</h1>
-          <p>Explore your personal listening history</p>
+          <h1>Spata</h1>
+          <p>A Spotify Analytics Platform</p>
         </header>
 
         <Navigation />
