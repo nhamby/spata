@@ -1350,6 +1350,7 @@ body {
   pointer-events: none;
   animation: tooltipPopIn 0.15s ease;
   white-space: normal;
+  min-width: 180px;
   max-width: 250px;
 }
 
