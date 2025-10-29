@@ -551,10 +551,8 @@ function Trends() {
                     }}
                   >
                     <div className="tooltip-date">{formatPeriod(chartData.data[hoveredIndex].period, granularity)}</div>
-                    <div className="tooltip-stats">
-                      <span>{chartData.data[hoveredIndex].play_count} plays</span>
-                      <span>{formatTime(chartData.data[hoveredIndex].total_ms)}</span>
-                    </div>
+                    <div className="tooltip-plays">{chartData.data[hoveredIndex].play_count} plays</div>
+                    <div className="tooltip-duration">{formatTime(chartData.data[hoveredIndex].total_ms)}</div>
                   </div>
                 )}
 

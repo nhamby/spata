@@ -1349,7 +1349,7 @@ body {
   z-index: 1000;
   pointer-events: none;
   animation: tooltipPopIn 0.15s ease;
-  white-space: nowrap;
+  white-space: normal;
   max-width: 250px;
 }
 
@@ -1385,19 +1385,17 @@ body {
   text-align: center;
 }
 
-.chart-tooltip-popup .tooltip-stats {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
+.chart-tooltip-popup .tooltip-plays {
   font-size: 0.85rem;
   color: rgba(255, 255, 255, 0.95);
-  flex-wrap: nowrap;
+  text-align: center;
+  margin-bottom: 4px;
 }
 
-.chart-tooltip-popup .tooltip-stats span {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+.chart-tooltip-popup .tooltip-duration {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.95);
+  text-align: center;
 }
 
 .chart-y-label {
