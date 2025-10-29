@@ -1497,8 +1497,9 @@ body {
   transform: rotate(-45deg);
   transform-origin: center;
   white-space: nowrap;
-  overflow: hidden;
+  overflow: visible;
   text-overflow: ellipsis;
+  padding-top: 18px;
 }
 
 .chart-x-axis span.hidden-label {

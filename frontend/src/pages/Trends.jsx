@@ -10,7 +10,7 @@ function Trends() {
   const [searchResults, setSearchResults] = useState({ artists: [], tracks: [] })
   const [selectedItem, setSelectedItem] = useState(null)
   const [trendsData, setTrendsData] = useState(null)
-  const [granularity, setGranularity] = useState('month')
+  const [granularity, setGranularity] = useState('year')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [loading, setLoading] = useState(false)
@@ -39,11 +39,11 @@ function Trends() {
         return `Week ${match[2]} ${match[1]}`
       }
     } else if (granularity === 'day') {
-      // Format: "2023-11-15" -> "Nov 15, 2023"
+      // Format: "2023-11-15" -> "14 Mar 2021"
       const date = new Date(period)
       const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-      return `${monthNames[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`
+      return `${date.getDate()} ${monthNames[date.getMonth()]} ${date.getFullYear()}`
     }
     
     // For year or unknown granularity, return as-is
@@ -594,7 +594,22 @@ function Trends() {
                   </div>
                   <div className="chart-x-axis">
                     {chartData.data.map((item, idx) => {
-                      const showLabel = chartData.data.length <= 12 || idx % Math.ceil(chartData.data.length / 12) === 0
+                      let showLabel = false
+                      
+                      if (granularity === 'month') {
+                        // Show only January, April, July, October
+                        const month = parseInt(item.period.split('-')[1], 10)
+                        showLabel = [1, 4, 7, 10].includes(month)
+                      } else if (granularity === 'day') {
+                        // Show only 1st and 14th of each month
+                        const date = new Date(item.period)
+                        const day = date.getDate()
+                        showLabel = [1, 14].includes(day)
+                      } else {
+                        // For year granularity, show all labels if <= 12, otherwise show every nth
+                        showLabel = chartData.data.length <= 12 || idx % Math.ceil(chartData.data.length / 12) === 0
+                      }
+                      
                       return (
                         <span key={idx} className={showLabel ? '' : 'hidden-label'}>
                           {formatPeriod(item.period, granularity)}
