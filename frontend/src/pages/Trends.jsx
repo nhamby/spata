@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { formatTime } from '../utils'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
 function Trends() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState({ artists: [], tracks: [] })
   const [selectedItem, setSelectedItem] = useState(null)
@@ -172,6 +173,29 @@ function Trends() {
   const handleMouseLeave = useCallback(() => {
     setHoveredIndex(null)
   }, [])
+
+  const handleBarClick = useCallback((period) => {
+    if (granularity === 'year') {
+      // Navigate to dashboard with year filter
+      navigate('/', { 
+        state: { 
+          selectedYears: [period]
+        }
+      })
+    } else if (granularity === 'month') {
+      // Parse year and month from period (format: "2023-11")
+      const [year, month] = period.split('-')
+      navigate('/', { 
+        state: { 
+          selectedYears: [year],
+          selectedMonths: [month]
+        }
+      })
+    } else if (granularity === 'day') {
+      // Navigate to calendar with day selected (format: "2023-11-15")
+      navigate(`/day/${period}`)
+    }
+  }, [granularity, navigate])
 
   // Hide tooltip on scroll
   useEffect(() => {
@@ -578,9 +602,20 @@ function Trends() {
                         >
                           <div 
                             className={`bar ${hoveredIndex === idx ? 'hovered' : ''}`}
-                            style={{ height: `${heightPercent}%` }}
+                            style={{ 
+                              height: `${heightPercent}%`,
+                              cursor: 'pointer'
+                            }}
                             onMouseEnter={(e) => handleMouseEnter(idx, e)}
                             onMouseLeave={handleMouseLeave}
+                            onClick={() => handleBarClick(item.period)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                handleBarClick(item.period)
+                              }
+                            }}
                           >
                             <span className="bar-value">
                               {yAxisMetric === 'plays' ? yValue : msToMinutes(yValue)}

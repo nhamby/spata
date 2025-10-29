@@ -1399,6 +1399,16 @@ body {
   text-align: center;
 }
 
+.chart-tooltip-popup .tooltip-hint {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  font-style: italic;
+}
+
 .chart-y-label {
   position: absolute;
   left: 40px;
@@ -1470,6 +1480,11 @@ body {
   transform: translateY(-3px);
   filter: brightness(1.2);
   box-shadow: 0 4px 20px rgba(29, 185, 84, 0.5);
+}
+
+.bar:active {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
 }
 
 .bar-value {

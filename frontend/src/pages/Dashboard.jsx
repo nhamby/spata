@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { formatDuration, formatDurationShort } from '../utils'
 
 // Use environment variable or default to localhost
@@ -7,6 +7,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
 function Dashboard() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [years, setYears] = useState([])
   const [months, setMonths] = useState([])
   const [seasons, setSeasons] = useState([])
@@ -25,6 +26,20 @@ function Dashboard() {
   useEffect(() => {
     fetchYears()
   }, [])
+
+  // Check if we received filters from navigation
+  useEffect(() => {
+    if (location.state?.selectedYears) {
+      setSelectedYears(location.state.selectedYears)
+    }
+    if (location.state?.selectedMonths) {
+      setSelectedMonths(location.state.selectedMonths)
+    }
+    // Clear the navigation state so refresh doesn't reapply it
+    if (location.state) {
+      window.history.replaceState({}, document.title)
+    }
+  }, [location])
 
   // Fetch available months and seasons when years change
   useEffect(() => {
